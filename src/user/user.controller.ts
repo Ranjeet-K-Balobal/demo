@@ -1,6 +1,6 @@
 // src/user/user.controller.ts
 
-import { Controller, Post, Body, NotFoundException, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, NotFoundException, Param, Get, Patch } from '@nestjs/common';
 import { SupabaseService } from '../supabase.service';
 
 
@@ -66,4 +66,38 @@ export class UserController {
 
       return { success: true, user: data };
   }
+
+  @Patch(':id')
+async updateUserProfile(@Param('id') userId: string, @Body() userData: any) {
+  const supabase = this.supabaseService.getSupabase();
+
+  // Update the user profile by ID
+  const { error: updateError } = await supabase
+    .from('users')
+    .update(userData)
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('Error updating user profile:', updateError.message);
+    throw new NotFoundException('User not found');
+  }
+
+  try {
+    // Fetch the updated user record
+    const { data } = await supabase
+      .from('users')
+      .select()
+      .eq('id', userId)
+      .single();
+
+    if (!data) {
+      throw new NotFoundException('User not found');
+    }
+
+    return { success: true, message: 'User profile updated successfully', user: data };
+  } catch (fetchError) {
+    console.error('Error fetching updated user profile:', fetchError.message);
+    throw new NotFoundException('User not found');
+  }
+}
 }
